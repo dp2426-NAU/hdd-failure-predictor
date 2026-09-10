@@ -13,11 +13,13 @@ import plotly.graph_objects as go
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
+import auth
 import live_feed
 from styles import inject_base_css, stat_card, pill, COLOR_ACCENT, COLOR_GOOD, COLOR_WARNING, COLOR_CRITICAL
 from components.three_d_rack import render_rack
 
 st.set_page_config(page_title="Fleet Overview · Drive Failure", page_icon="🖥️", layout="wide")
+auth.require_password()
 inject_base_css()
 live_feed.init_session_state()
 

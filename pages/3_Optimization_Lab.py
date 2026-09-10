@@ -26,10 +26,12 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+import auth
 from styles import inject_base_css, stat_card, COLOR_ACCENT, COLOR_GOOD, COLOR_CRITICAL
 from cost_simulator import build_cost_surface
 
 st.set_page_config(page_title="Optimization Lab · Drive Failure", page_icon="🧪", layout="wide")
+auth.require_password()
 inject_base_css()
 
 st.title("🧪 Optimization Lab")

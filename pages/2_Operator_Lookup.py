@@ -14,6 +14,7 @@ import plotly.graph_objects as go
 import shap
 import streamlit as st
 
+import auth
 import live_feed
 from styles import inject_base_css, stat_card, COLOR_ACCENT, COLOR_GOOD, COLOR_WARNING, COLOR_CRITICAL
 
@@ -57,6 +58,7 @@ def load_support_files():
 
 
 st.set_page_config(page_title="Operator Lookup · Drive Failure", page_icon="🔧", layout="wide")
+auth.require_password()
 inject_base_css()
 live_feed.init_session_state()
 

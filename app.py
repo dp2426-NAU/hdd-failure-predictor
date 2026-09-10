@@ -15,6 +15,7 @@ import json
 import streamlit as st
 
 from styles import inject_base_css, stat_card
+import auth
 import live_feed
 import provenance
 
@@ -22,6 +23,7 @@ with open("model/metrics.json") as f:
     metrics = json.load(f)
 
 st.set_page_config(page_title="Predicting Drive Failure", page_icon="💽", layout="wide")
+auth.require_password()
 inject_base_css()
 live_feed.init_session_state()
 
