@@ -1,0 +1,14 @@
+{
+  "source": "real_backblaze_download",
+  "raw_dir": "data\\raw",
+  "models_filtered": [
+    "ST16000NM001G"
+  ],
+  "n_failure_rows": 267,
+  "n_healthy_rows": 267,
+  "date_range": [
+    "2026-01-01",
+    "2026-03-31"
+  ],
+  "generated_at": "2026-09-10T00:03:59.599637+00:00"
+}

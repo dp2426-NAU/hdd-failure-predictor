@@ -1,0 +1,15 @@
+{
+  "concordance_index": 0.9445652393694101,
+  "n_drives": 34729,
+  "n_events": 43,
+  "median_fleet_survival_days": null,
+  "hazard_ratios": {
+    "smart_5_raw": 1.0000588296,
+    "smart_9_raw": 0.9999995494,
+    "smart_187_raw": 1.0000083849,
+    "smart_188_raw": 1.0,
+    "smart_194_raw": 0.9997495344,
+    "smart_197_raw": 1.0000068442,
+    "smart_198_raw": 1.0000068442
+  }
+}
