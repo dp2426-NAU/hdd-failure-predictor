@@ -229,6 +229,22 @@ baselines — worth noting as a design decision in your written report.
 
 - **Imbalanced, rare-event target.** Even in a good year, real drives fail
   ~1.36% of the time annually. Report precision/recall/F1, not raw accuracy.
+- **Only ~43 real failing drives underlie every classifier metric.** That's
+  genuinely few for a held-out evaluation, and it shows: `train_model.py`
+  evaluates all 4 folds of its `StratifiedGroupKFold` split (not just the
+  one it deploys) and saves the spread to `model/metrics.json` under
+  `cross_fold_stability` — precision stayed a tight 0.98 ± 0.02 across
+  folds, but recall swung from 0.62 to 1.00 depending on which specific
+  failing drives landed in the test fold (mean 0.90 ± 0.16). Report the
+  range, not just the deployed fold's point estimate, if asked how stable
+  these numbers are.
+- **The train/test split is grouped by drive, not by row** — a failing
+  drive contributes multiple rows to the positive class (one per
+  pre-failure day within the horizon), and a drive's SMART readings are
+  autocorrelated day-to-day. `train_model.py` uses `StratifiedGroupKFold`
+  on `serial_number` so no drive's rows appear on both sides of the split;
+  an earlier row-level split let the same physical drive leak across train
+  and test, which likely inflated its numbers.
 - **One vendor's fleet.** Backblaze's operating conditions (temperature,
   workload, RAID config) may not match another organization's — treat this
   as a demonstrated method, not a drop-in production tool.

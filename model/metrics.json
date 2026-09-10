@@ -1,55 +1,112 @@
 {
   "classification_report": {
     "0": {
-      "precision": 0.9558823529411765,
-      "recall": 0.9701492537313433,
-      "f1-score": 0.9629629629629629,
-      "support": 67.0
+      "precision": 1.0,
+      "recall": 0.921875,
+      "f1-score": 0.959349593495935,
+      "support": 64.0
     },
     "1": {
-      "precision": 0.9696969696969697,
-      "recall": 0.9552238805970149,
-      "f1-score": 0.9624060150375939,
-      "support": 67.0
+      "precision": 0.9397590361445783,
+      "recall": 1.0,
+      "f1-score": 0.968944099378882,
+      "support": 78.0
     },
-    "accuracy": 0.9626865671641791,
+    "accuracy": 0.9647887323943662,
     "macro avg": {
-      "precision": 0.9627896613190732,
-      "recall": 0.9626865671641791,
-      "f1-score": 0.9626844890002784,
-      "support": 134.0
+      "precision": 0.9698795180722892,
+      "recall": 0.9609375,
+      "f1-score": 0.9641468464374086,
+      "support": 142.0
     },
     "weighted avg": {
-      "precision": 0.962789661319073,
-      "recall": 0.9626865671641791,
-      "f1-score": 0.9626844890002785,
-      "support": 134.0
+      "precision": 0.966909893093501,
+      "recall": 0.9647887323943662,
+      "f1-score": 0.9646198150372721,
+      "support": 142.0
     }
   },
   "confusion_matrix": [
     [
-      65,
-      2
+      59,
+      5
     ],
     [
-      3,
-      64
+      0,
+      78
     ]
   ],
   "confusion_matrix_labels": [
     "healthy (0)",
     "will fail soon (1)"
   ],
+  "roc_auc": 0.9979967948717949,
   "feature_importances": {
-    "smart_5_raw": 0.1701927243064095,
-    "smart_9_raw": 0.0682988183975916,
-    "smart_187_raw": 0.2937966905643901,
-    "smart_188_raw": 0.09620473176603665,
-    "smart_194_raw": 0.02232412417078487,
-    "smart_197_raw": 0.17180451445456643,
-    "smart_198_raw": 0.1773783963402208
+    "smart_5_raw": 0.17424084979559157,
+    "smart_9_raw": 0.0905614296776011,
+    "smart_187_raw": 0.29817354122653117,
+    "smart_188_raw": 0.06137927373919974,
+    "smart_194_raw": 0.033139536858491817,
+    "smart_197_raw": 0.1658163208291577,
+    "smart_198_raw": 0.17668904787342693
   },
-  "n_train": 400,
-  "n_test": 134,
+  "n_train": 392,
+  "n_test": 142,
+  "n_drives_train": 230,
+  "n_drives_test": 77,
+  "split_method": "StratifiedGroupKFold(n_splits=4) grouped by serial_number -- no drive's rows appear on both sides of the split",
+  "cross_fold_stability": {
+    "note": "Diagnostic only -- shows how much precision/recall/F1 move across the 4 StratifiedGroupKFold folds, given only ~43 real failing drives total. The deployed model below uses fold 0; this range is disclosed so fold 0's numbers aren't read as more certain than they are.",
+    "folds": [
+      {
+        "fold": 0,
+        "n_test_drives": 77,
+        "n_failing_test_drives": 13,
+        "precision": 0.9397590361445783,
+        "recall": 1.0,
+        "f1": 0.968944099378882,
+        "roc_auc": 0.9979967948717949
+      },
+      {
+        "fold": 1,
+        "n_test_drives": 77,
+        "n_failing_test_drives": 10,
+        "precision": 0.9761904761904762,
+        "recall": 0.6212121212121212,
+        "f1": 0.7592592592592593,
+        "roc_auc": 0.8618538324420677
+      },
+      {
+        "fold": 2,
+        "n_test_drives": 76,
+        "n_failing_test_drives": 8,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "roc_auc": 1.0
+      },
+      {
+        "fold": 3,
+        "n_test_drives": 77,
+        "n_failing_test_drives": 10,
+        "precision": 1.0,
+        "recall": 0.9857142857142858,
+        "f1": 0.9928057553956835,
+        "roc_auc": 1.0
+      }
+    ],
+    "mean": {
+      "precision": 0.9789873780837637,
+      "recall": 0.9017316017316017,
+      "f1": 0.9302522785084562,
+      "roc_auc": 0.9649626568284657
+    },
+    "std": {
+      "precision": 0.024646227049427424,
+      "recall": 0.16206297106088707,
+      "f1": 0.09938982814927314,
+      "roc_auc": 0.059535524637922096
+    }
+  },
   "horizon_days": 7
 }
