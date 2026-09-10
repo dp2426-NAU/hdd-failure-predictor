@@ -58,8 +58,8 @@ def load_support_files():
 
 
 st.set_page_config(page_title="Operator Lookup · Drive Failure", page_icon="🔧", layout="wide")
-auth.require_password()
 inject_base_css()
+auth.require_login()
 live_feed.init_session_state()
 
 model = load_model()

@@ -31,8 +31,8 @@ from styles import inject_base_css, stat_card, COLOR_ACCENT, COLOR_GOOD, COLOR_C
 from cost_simulator import build_cost_surface
 
 st.set_page_config(page_title="Optimization Lab · Drive Failure", page_icon="🧪", layout="wide")
-auth.require_password()
 inject_base_css()
+auth.require_login()
 
 st.title("🧪 Optimization Lab")
 st.caption("Remaining-useful-life estimation and cost-optimized alert thresholds — going beyond a plain "

@@ -8,5 +8,7 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: APP_LOGIN_ID
+        sync: false  # set in Render's dashboard (Environment tab), not here -- leave unset (with APP_PASSWORD) to keep the app open
       - key: APP_PASSWORD
-        sync: false  # set in Render's dashboard (Environment tab), not here -- leave unset to keep the app open
+        sync: false  # set in Render's dashboard (Environment tab), not here -- leave unset (with APP_LOGIN_ID) to keep the app open
