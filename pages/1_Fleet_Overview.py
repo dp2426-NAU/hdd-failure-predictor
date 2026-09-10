@@ -13,7 +13,6 @@ import plotly.graph_objects as go
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
-import assistant
 import auth
 import email_alerts
 import live_feed
@@ -34,20 +33,23 @@ with top_l:
 with top_r:
     live_on = st.toggle("▶ Live mode", value=False, help="Auto-advance the simulated clock")
 
-alerts_on = assistant.is_configured() and email_alerts.is_configured()
-with st.expander(f"🤖 AI-drafted critical alerts — {'ON' if alerts_on else 'not configured'}"):
+alerts_on = email_alerts.is_configured()
+with st.expander(f"📧 Critical-risk alert emails — {'ON' if alerts_on else 'not configured'}"):
     st.caption(
-        "When a drive crosses into critical risk during this replay, Claude turns its SHAP "
-        "explanation into a plain-English incident summary and emails it — same idea as Operator "
-        "Lookup's per-drive SHAP chart, delivered as an alert instead of read on the page. "
+        "When a drive crosses into critical risk during this replay, a rule-based summary is built "
+        "from its real SHAP explanation (no external API, no per-call cost) and emailed — same idea "
+        "as Operator Lookup's per-drive SHAP chart, delivered as an alert instead of read on the page. "
         "At most one new alert per day-tick, and each drive triggers at most one per session."
     )
     st.markdown(
-        '<div class="disclosure">This fires while the replay is running in your browser — Step '
-        "forward or Live mode — not from a 24/7 background monitor; Render's free tier has no "
-        'persistent worker, and there\'s no live sensor behind this demo (see the Home page). '
-        "Configure via ANTHROPIC_API_KEY + SMTP_HOST/PORT/USER/PASSWORD + ALERT_EMAIL_TO in your "
-        "deployment's environment variables.</div>",
+        '<div class="disclosure"><b>This in-browser alert only fires while the replay is running in '
+        "your browser</b> — Step forward or Live mode — not from a 24/7 background monitor; Render's "
+        "free tier has no persistent worker. For genuinely unattended alerts, this project also runs "
+        "an hourly automated fleet check via GitHub Actions (free, unlimited on a public repo) — see "
+        "<code>scripts/check_and_alert.py</code> and <code>.github/workflows/fleet-check.yml</code> — "
+        "which emails a status report on its own schedule, independent of anyone having this app open. "
+        "Configure via SMTP_HOST/PORT/USER/PASSWORD + ALERT_EMAIL_TO — as Render environment variables "
+        "for this in-browser alert, and as GitHub Actions secrets for the scheduled one.</div>",
         unsafe_allow_html=True,
     )
 

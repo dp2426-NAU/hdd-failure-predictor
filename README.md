@@ -115,11 +115,16 @@ hdd-failure-predictor/
 ├── cost_simulator.py                # threshold x cost-ratio projected-cost grid (Optimization Lab)
 ├── styles.py                       # shared theme (colors, fonts, stat cards, status pills)
 ├── auth.py                         # optional sign-in gate (APP_LOGIN_ID / APP_PASSWORD)
-├── assistant.py                    # Claude-powered incident summaries + drive Q&A chat (ANTHROPIC_API_KEY)
-├── email_alerts.py                 # SMTP sender for AI-drafted critical-risk alerts
+├── report_generator.py             # rule-based (free, no external API) incident/status report text
+├── email_alerts.py                 # SMTP sender for critical-risk alerts and automated reports
 ├── requirements.txt
 ├── render.yaml                     # Render Blueprint — one-click deploy config
 ├── .streamlit/config.toml          # dark professional theme
+├── .github/workflows/
+│   └── fleet-check.yml             # hourly GitHub Actions automation (free, unattended)
+├── automation/
+│   ├── state.json                  # persisted state for the scheduled check (see automation/README.md)
+│   └── README.md                   # how the scheduled automation works + how to set it up
 ├── pages/
 │   ├── 1_Fleet_Overview.py         # leadership/budget dashboard (live-feel + 3D rack)
 │   ├── 2_Operator_Lookup.py        # technician dashboard (SHAP-explained single-drive detail)
@@ -145,7 +150,8 @@ hdd-failure-predictor/
     ├── prepare_data.py             # early-warning labeling + balancing
     ├── train_model.py              # trains the classifier + saves test predictions
     ├── prepare_survival_data.py    # one-row-per-drive duration/event table
-    └── train_survival_model.py     # trains the Cox model + Kaplan-Meier baseline
+    ├── train_survival_model.py     # trains the Cox model + Kaplan-Meier baseline
+    └── check_and_alert.py          # headless script run by the GitHub Actions automation
 ```
 
 ## Where 3D shows up, and why both uses are legitimate
@@ -167,41 +173,44 @@ trend line, the survival curve) stays flat 2D on purpose — 3D bar/pie charts
 distort the numbers they represent, which is why they're avoided everywhere
 except these two data-driven exceptions.
 
-## Optional: AI-drafted critical alerts + a drive Q&A chat
+## Automation: critical-alert emails + a real scheduled fleet check
 
-Two Claude-powered features, both gated on `ANTHROPIC_API_KEY` and both
-no-ops when it's unset (no code change needed to disable them — local dev
-and the `AppTest` checks run identically either way):
+Two email-alert layers, both free (no external API, no per-call cost —
+just SMTP and Python string templates over real model + SHAP output via
+`report_generator.py`), covering two different meanings of "automated":
 
-- **Critical-alert emails** (`assistant.py` + `email_alerts.py`, wired into
-  `live_feed.py`): when a drive crosses into critical risk during Fleet
-  Overview's replay, Claude turns that drive's real SHAP explanation into a
-  short plain-English incident summary, and it's emailed via SMTP. At most
-  one new alert per day-tick and one per drive per session, so a long Live
-  mode run can't run away with your API/SMTP usage. Requires
-  `ANTHROPIC_API_KEY` **and** `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` /
-  `SMTP_PASSWORD` / `ALERT_EMAIL_TO` — leaving any of the six unset disables
-  it. `SMTP_PASSWORD` is an **app password**, not your regular account
-  password (Gmail and most providers reject plain passwords for SMTP).
-- **Drive Q&A chat** (`assistant.py`, on Operator Lookup): ask a free-text
-  question about the currently selected drive, answered by Claude using its
-  real risk score, SMART readings, and SHAP contributions as context — not
-  a general-purpose chatbot bolted on top.
+- **In-browser alert** (`email_alerts.py`, wired into `live_feed.py`): when
+  a drive crosses into critical risk while someone is actively stepping
+  through Fleet Overview's replay (Step forward or Live mode), a rule-based
+  incident summary is built from that drive's real SHAP explanation and
+  emailed. At most one new alert per day-tick and one per drive per
+  session. This only fires while the app is open in a browser — see the
+  "Critical-risk alert emails" expander on that page.
+- **Scheduled automation** (`scripts/check_and_alert.py` +
+  `.github/workflows/fleet-check.yml`): a GitHub Actions workflow that runs
+  **on an hourly schedule, independent of the deployed app or anyone having
+  it open** — the genuinely unattended piece. Each run advances the replay
+  a couple of simulated days, checks for newly-critical drives or
+  failures, and emails a status report. State persists in
+  `automation/state.json`, committed back to the repo by the workflow
+  itself after each run. Free and unlimited on a public GitHub repo — see
+  `automation/README.md` for setup (GitHub Actions secrets, not Render env
+  vars) and how to verify it's actually running unattended (GitHub's own
+  Actions run history, with real timestamps, is the most convincing proof).
 
-**Honest scope — read this before demoing it:** both features fire *while
-the app is open and the replay is running* (Step forward or Live mode).
-Render's free tier has no persistent background worker, and there is no
-live sensor behind this project in the first place (see "What live means"
-above) — so this is not a 24/7 monitoring service that emails you while
-your laptop is closed. It's the same "replay, honestly labeled as a
-replay" mechanism as the rest of the project, extended to a new output.
+Both read the same five SMTP variables (`SMTP_HOST` / `SMTP_PORT` /
+`SMTP_USER` / `SMTP_PASSWORD` / `ALERT_EMAIL_TO`) but from **two different
+places** — Render environment variables for the in-browser alert, GitHub
+Actions secrets for the scheduled one — since they're two separate
+systems. `SMTP_PASSWORD` is an **app password**, not your regular account
+password (Gmail and most providers reject plain passwords for SMTP).
+Leaving any of the five unset disables that layer with no code change and
+no crash — same no-op-when-unconfigured pattern as `auth.py`.
 
-**Cost:** every call spends real money against your own Anthropic API key
-— there is no shared or subsidized key. Both features default to Claude
-Opus 5 (`claude-opus-5`) at low effort, which keeps each call to a few
-hundred tokens; override the model with the `ASSISTANT_MODEL` env var
-(e.g. `claude-sonnet-5` or `claude-haiku-4-5`) for a cheaper option during
-a live classroom demo.
+**Honest scope:** neither layer is a live sensor — both replay the same
+real, fixed historical Backblaze quarter (see "What live means" above).
+The scheduled layer genuinely runs unattended on a real cron schedule; the
+in-browser layer doesn't, and says so explicitly in its own disclosure.
 
 ## A note on installing `lifelines`
 
@@ -291,9 +300,10 @@ baselines — worth noting as a design decision in your written report.
   drawing any conclusions you present as findings.
 - **"Live" is a labeled replay, not a live feed.** Say this plainly if asked
   in your presentation — see the banner at the top of this file. The
-  optional AI critical-alert emails (see "AI-drafted critical alerts" above)
-  inherit the same limitation: they fire during the interactive replay, not
-  from a 24/7 background monitor.
+  in-browser critical-alert email (see "Automation" above) inherits this
+  same limitation — it fires during the interactive replay, not from a
+  24/7 monitor. The separate GitHub Actions scheduled check is the one
+  genuine exception: it runs unattended, on a real cron schedule.
 - **The cost-avoidance figure on Fleet Overview is an adjustable assumption**,
   not a sourced statistic — it multiplies an editable "cost per incident"
   slider by drives caught before failure. Don't quote the dollar figure in

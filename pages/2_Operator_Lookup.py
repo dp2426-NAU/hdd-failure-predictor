@@ -14,7 +14,6 @@ import plotly.graph_objects as go
 import shap
 import streamlit as st
 
-import assistant
 import auth
 import live_feed
 from styles import inject_base_css, stat_card, COLOR_ACCENT, COLOR_GOOD, COLOR_WARNING, COLOR_CRITICAL
@@ -192,40 +191,6 @@ with right:
         "typical healthy drive": [healthy_medians[c] for c in feature_columns],
     })
     st.dataframe(compare_df, hide_index=True, use_container_width=True)
-
-st.divider()
-st.subheader("💬 Ask about this drive")
-st.caption("A Claude-powered assistant, grounded in this drive's real risk score, SMART readings, and "
-           "SHAP contributions above — not a general chatbot, and it doesn't invent numbers you haven't seen.")
-
-if not assistant.is_configured():
-    st.info("Not configured — set ANTHROPIC_API_KEY in your deployment's environment variables to enable this.")
-else:
-    drive_id = chosen if source != "Enter SMART values manually" else "manual"
-    if st.session_state.get("chat_drive_id") != drive_id:
-        st.session_state.chat_drive_id = drive_id
-        st.session_state.chat_history = []  # reset the conversation when the selected drive changes
-
-    for msg in st.session_state.chat_history:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-
-    question = st.chat_input("Ask a question about this drive...")
-    if question:
-        with st.chat_message("user"):
-            st.write(question)
-        chat_context = {
-            "serial": chosen if source != "Enter SMART values manually" else "(manually entered readings)",
-            "risk_pct": risk,
-            "readings": {FEATURE_LABELS.get(c, c): v for c, v in input_values.items()},
-            "shap": {FEATURE_LABELS.get(c, c): round(float(v), 3) for c, v in zip(feature_columns, shap_values)},
-        }
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                answer = assistant.answer_drive_question(question, chat_context, st.session_state.chat_history)
-            st.write(answer)
-        st.session_state.chat_history.append({"role": "user", "content": question})
-        st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
 st.divider()
 report = metrics["classification_report"]["1"]

@@ -1,0 +1,54 @@
+name: Automated fleet check
+
+# Runs scripts/check_and_alert.py on a schedule -- this is the genuinely
+# unattended automation, independent of the deployed Streamlit app or
+# anyone having it open. Free and unlimited on a public GitHub repo.
+#
+# GitHub's own caveats, worth knowing:
+#   - Scheduled workflows can run a few minutes late during high platform
+#     load; the cron time is a target, not a guarantee.
+#   - GitHub disables scheduled workflows automatically after 60 days of
+#     repo inactivity (no commits/pushes) -- push anything to re-enable it,
+#     or just run it manually from the Actions tab (workflow_dispatch below).
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # every hour, on the hour (UTC)
+  workflow_dispatch: {}  # lets you trigger a run on demand from the Actions tab
+
+permissions:
+  contents: write  # needed to commit the updated automation/state.json back to the repo
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        # A minimal subset of requirements.txt -- this script never touches
+        # Streamlit, Plotly, or lifelines, only what it actually imports.
+        # Pinned to the same versions as requirements.txt so unpickling
+        # model/model.pkl behaves identically to the deployed app.
+        run: pip install pandas==2.2.3 numpy==2.1.3 scikit-learn==1.5.2 joblib==1.4.2 shap==0.51.0
+
+      - name: Run fleet check
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+        run: python scripts/check_and_alert.py
+
+      - name: Commit updated automation state
+        run: |
+          git config user.name "fleet-check-bot"
+          git config user.email "actions@github.com"
+          git add automation/state.json
+          git diff --staged --quiet || git commit -m "Automated fleet check: update state [skip ci]"
+          git push

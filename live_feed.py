@@ -27,9 +27,9 @@ import pandas as pd
 import shap
 import streamlit as st
 
-import assistant
 import email_alerts
 import provenance
+import report_generator
 
 SAMPLE_DATA_PATH = "data/sample_drive_stats.csv"
 REAL_DATA_PATH = "data/real_drive_stats.csv"  # written by scripts/prepare_live_feed_data.py
@@ -174,31 +174,31 @@ def _shap_contributions(row: pd.Series, feature_columns: list[str]) -> list[tupl
 
 
 def _maybe_send_critical_alert(serial: str, row: pd.Series) -> str | None:
-    """Drafts an AI incident summary and emails it for a drive that just
-    crossed into critical risk -- at most once per drive per session (see
+    """Drafts a rule-based incident summary (report_generator.py -- no
+    external API, free) and emails it for a drive that just crossed into
+    critical risk, at most once per drive per session (see
     alerted_serials). Returns an event-feed message on a successful send,
     None otherwise (not configured, or the send failed) so the caller can
     add a visible event only when something real happened.
 
-    HONEST SCOPE: this only runs while someone has the app open and is
-    stepping through the replay (or has Live mode on) -- see
-    email_alerts.py's docstring. It is not a 24/7 background monitor."""
-    if not (assistant.is_configured() and email_alerts.is_configured()):
+    HONEST SCOPE: this in-browser alert only runs while someone has the
+    app open and is stepping through the replay (or has Live mode on) --
+    see email_alerts.py's docstring. The genuinely unattended automation
+    lives in scripts/check_and_alert.py, run on a real schedule by
+    .github/workflows/fleet-check.yml (GitHub Actions), independent of
+    anyone having this app open."""
+    if not email_alerts.is_configured():
         return None
 
     feature_columns = _load_feature_columns()
-    readings = {c: row[c] for c in feature_columns}
     shap_contribs = _shap_contributions(row, feature_columns)
-
-    summary = assistant.draft_incident_summary(serial, float(row["risk"]), readings, shap_contribs)
-    if not summary:
-        return None
+    summary = report_generator.incident_summary(serial, float(row["risk"]), shap_contribs)
 
     sent = email_alerts.send_alert_email(
         subject=f"[Drive Alert] {serial} flagged HIGH RISK ({row['risk']:.0%})",
         body=summary,
     )
-    return "📧 AI alert emailed" if sent else None
+    return "📧 Alert emailed" if sent else None
 
 
 def step_and_record():

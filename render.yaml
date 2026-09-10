@@ -12,12 +12,10 @@ services:
         sync: false  # set in Render's dashboard (Environment tab), not here -- leave unset (with APP_PASSWORD) to keep the app open
       - key: APP_PASSWORD
         sync: false  # set in Render's dashboard (Environment tab), not here -- leave unset (with APP_LOGIN_ID) to keep the app open
-      - key: ANTHROPIC_API_KEY
-        sync: false  # enables the AI incident-alert drafting + drive Q&A chat -- leave unset to disable both, no code change needed
-      - key: ASSISTANT_MODEL
-        sync: false  # optional -- defaults to claude-opus-5 in code if unset; e.g. claude-sonnet-5 or claude-haiku-4-5 for a cheaper/faster demo
       - key: SMTP_HOST
-        sync: false  # e.g. smtp.gmail.com -- required (with the 4 vars below) for the AI critical-alert emails; leave any unset to disable
+        sync: false  # e.g. smtp.gmail.com -- required (with the 4 vars below) for the in-browser critical-alert emails; leave any unset to disable.
+                     # This is separate from the scheduled GitHub Actions check (see .github/workflows/fleet-check.yml), which reads its
+                     # own copies of these same 5 vars from GitHub Actions secrets, not from here.
       - key: SMTP_PORT
         sync: false  # e.g. 587
       - key: SMTP_USER
