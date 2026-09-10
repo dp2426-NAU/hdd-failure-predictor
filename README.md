@@ -114,6 +114,9 @@ hdd-failure-predictor/
 ├── provenance.py                   # reads data/provenance.json for the accurate data-source banner
 ├── cost_simulator.py                # threshold x cost-ratio projected-cost grid (Optimization Lab)
 ├── styles.py                       # shared theme (colors, fonts, stat cards, status pills)
+├── auth.py                         # optional sign-in gate (APP_LOGIN_ID / APP_PASSWORD)
+├── assistant.py                    # Claude-powered incident summaries + drive Q&A chat (ANTHROPIC_API_KEY)
+├── email_alerts.py                 # SMTP sender for AI-drafted critical-risk alerts
 ├── requirements.txt
 ├── render.yaml                     # Render Blueprint — one-click deploy config
 ├── .streamlit/config.toml          # dark professional theme
@@ -163,6 +166,42 @@ Every other chart in this project (risk gauges, SHAP bars, the fleet-risk
 trend line, the survival curve) stays flat 2D on purpose — 3D bar/pie charts
 distort the numbers they represent, which is why they're avoided everywhere
 except these two data-driven exceptions.
+
+## Optional: AI-drafted critical alerts + a drive Q&A chat
+
+Two Claude-powered features, both gated on `ANTHROPIC_API_KEY` and both
+no-ops when it's unset (no code change needed to disable them — local dev
+and the `AppTest` checks run identically either way):
+
+- **Critical-alert emails** (`assistant.py` + `email_alerts.py`, wired into
+  `live_feed.py`): when a drive crosses into critical risk during Fleet
+  Overview's replay, Claude turns that drive's real SHAP explanation into a
+  short plain-English incident summary, and it's emailed via SMTP. At most
+  one new alert per day-tick and one per drive per session, so a long Live
+  mode run can't run away with your API/SMTP usage. Requires
+  `ANTHROPIC_API_KEY` **and** `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` /
+  `SMTP_PASSWORD` / `ALERT_EMAIL_TO` — leaving any of the six unset disables
+  it. `SMTP_PASSWORD` is an **app password**, not your regular account
+  password (Gmail and most providers reject plain passwords for SMTP).
+- **Drive Q&A chat** (`assistant.py`, on Operator Lookup): ask a free-text
+  question about the currently selected drive, answered by Claude using its
+  real risk score, SMART readings, and SHAP contributions as context — not
+  a general-purpose chatbot bolted on top.
+
+**Honest scope — read this before demoing it:** both features fire *while
+the app is open and the replay is running* (Step forward or Live mode).
+Render's free tier has no persistent background worker, and there is no
+live sensor behind this project in the first place (see "What live means"
+above) — so this is not a 24/7 monitoring service that emails you while
+your laptop is closed. It's the same "replay, honestly labeled as a
+replay" mechanism as the rest of the project, extended to a new output.
+
+**Cost:** every call spends real money against your own Anthropic API key
+— there is no shared or subsidized key. Both features default to Claude
+Opus 5 (`claude-opus-5`) at low effort, which keeps each call to a few
+hundred tokens; override the model with the `ASSISTANT_MODEL` env var
+(e.g. `claude-sonnet-5` or `claude-haiku-4-5`) for a cheaper option during
+a live classroom demo.
 
 ## A note on installing `lifelines`
 
@@ -251,7 +290,10 @@ baselines — worth noting as a design decision in your written report.
 - **The bundled sample is synthetic.** Swap in real data (above) before
   drawing any conclusions you present as findings.
 - **"Live" is a labeled replay, not a live feed.** Say this plainly if asked
-  in your presentation — see the banner at the top of this file.
+  in your presentation — see the banner at the top of this file. The
+  optional AI critical-alert emails (see "AI-drafted critical alerts" above)
+  inherit the same limitation: they fire during the interactive replay, not
+  from a 24/7 background monitor.
 - **The cost-avoidance figure on Fleet Overview is an adjustable assumption**,
   not a sourced statistic — it multiplies an editable "cost per incident"
   slider by drives caught before failure. Don't quote the dollar figure in

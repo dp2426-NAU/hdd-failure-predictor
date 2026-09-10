@@ -13,7 +13,9 @@ import plotly.graph_objects as go
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
+import assistant
 import auth
+import email_alerts
 import live_feed
 from styles import inject_base_css, stat_card, pill, COLOR_ACCENT, COLOR_GOOD, COLOR_WARNING, COLOR_CRITICAL
 from components.three_d_rack import render_rack
@@ -31,6 +33,23 @@ with top_l:
                "stand-in for a live monitoring feed. See the note on the Home page for what this does and doesn't mean.")
 with top_r:
     live_on = st.toggle("▶ Live mode", value=False, help="Auto-advance the simulated clock")
+
+alerts_on = assistant.is_configured() and email_alerts.is_configured()
+with st.expander(f"🤖 AI-drafted critical alerts — {'ON' if alerts_on else 'not configured'}"):
+    st.caption(
+        "When a drive crosses into critical risk during this replay, Claude turns its SHAP "
+        "explanation into a plain-English incident summary and emails it — same idea as Operator "
+        "Lookup's per-drive SHAP chart, delivered as an alert instead of read on the page. "
+        "At most one new alert per day-tick, and each drive triggers at most one per session."
+    )
+    st.markdown(
+        '<div class="disclosure">This fires while the replay is running in your browser — Step '
+        "forward or Live mode — not from a 24/7 background monitor; Render's free tier has no "
+        'persistent worker, and there\'s no live sensor behind this demo (see the Home page). '
+        "Configure via ANTHROPIC_API_KEY + SMTP_HOST/PORT/USER/PASSWORD + ALERT_EMAIL_TO in your "
+        "deployment's environment variables.</div>",
+        unsafe_allow_html=True,
+    )
 
 control_l, control_r, control_reset = st.columns([1, 1, 1])
 with control_l:
