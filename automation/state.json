@@ -1,5 +1,5 @@
 {
-  "day_index": 9,
+  "day_index": 11,
   "previously_high_risk": [
     "ZL22AW6F",
     "ZL22K5S5",
@@ -34,7 +34,6 @@
     "ZL23XFTV",
     "ZL23XFWP",
     "ZL23XRVS",
-    "ZL23XS9Z",
     "ZL23XZ3G",
     "ZL23XZMD",
     "ZL23XZR1",
@@ -64,6 +63,6 @@
     "ZL2NFZZ0",
     "ZL2NPK11"
   ],
-  "cumulative_failures": 1,
+  "cumulative_failures": 2,
   "cumulative_warned": 1
 }
