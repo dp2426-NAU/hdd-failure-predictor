@@ -1,8 +1,9 @@
 {
-  "day_index": 21,
+  "day_index": 23,
   "previously_high_risk": [
     "ZL22AW6F",
     "ZL22K5S5",
+    "ZL22YR5Z",
     "ZL22YRHE",
     "ZL22YRJG",
     "ZL22YRXR",
@@ -19,12 +20,14 @@
     "ZL230M2E",
     "ZL230M37",
     "ZL232KRK",
+    "ZL232T34",
     "ZL2351Q6",
     "ZL23MZD3",
     "ZL23T62Q",
     "ZL23WSX1",
     "ZL23X1G2",
     "ZL23X262",
+    "ZL23X296",
     "ZL23X3YD",
     "ZL23X46J",
     "ZL23X4LN",
@@ -33,7 +36,6 @@
     "ZL23XFP8",
     "ZL23XFTV",
     "ZL23XFWP",
-    "ZL23XG8P",
     "ZL23XRVS",
     "ZL23XZ3G",
     "ZL23XZMD",
@@ -55,9 +57,9 @@
     "ZL2L8QZQ",
     "ZL2L8SHA",
     "ZL2L8W61",
+    "ZL2L9J4J",
     "ZL2L9JCL",
     "ZL2LMZTC",
-    "ZL2LVLGE",
     "ZL2MD0PN",
     "ZL2MD6JT",
     "ZL2MLT54",
@@ -66,6 +68,6 @@
     "ZL2NFZZ0",
     "ZL2NPK11"
   ],
-  "cumulative_failures": 8,
+  "cumulative_failures": 9,
   "cumulative_warned": 6
 }
