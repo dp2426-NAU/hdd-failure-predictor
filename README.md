@@ -145,7 +145,9 @@ hdd-failure-predictor/
 │   ├── state.json                  # persisted state for the scheduled check (see automation/README.md)
 │   └── README.md                   # how the scheduled automation works + how to set it up
 ├── docs/
-│   └── screenshots/                # dashboard screenshots used in this README
+│   ├── screenshots/                 # dashboard screenshots used in this README
+│   ├── Predicting_Drive_Failure_Report.docx   # formal written report (generated)
+│   └── Predicting_Drive_Failure_Slides.pptx   # defense slide deck (generated)
 ├── pages/
 │   ├── 1_Fleet_Overview.py         # leadership/budget dashboard (live-feel + 3D rack)
 │   ├── 2_Operator_Lookup.py        # technician dashboard (SHAP-explained single-drive detail)
@@ -172,7 +174,10 @@ hdd-failure-predictor/
     ├── train_model.py              # trains the classifier + saves test predictions
     ├── prepare_survival_data.py    # one-row-per-drive duration/event table
     ├── train_survival_model.py     # trains the Cox model + Kaplan-Meier baseline
-    └── check_and_alert.py          # headless script run by the GitHub Actions automation
+    ├── check_and_alert.py          # headless script run by the GitHub Actions automation
+    ├── requirements-docs.txt       # only needed to regenerate the docx/pptx below
+    ├── generate_docx_report.py     # builds docs/Predicting_Drive_Failure_Report.docx
+    └── generate_pptx_deck.py       # builds docs/Predicting_Drive_Failure_Slides.pptx
 ```
 
 ## Where 3D shows up, and why both uses are legitimate

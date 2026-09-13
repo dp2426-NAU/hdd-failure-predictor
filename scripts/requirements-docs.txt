@@ -1,0 +1,7 @@
+# Only needed to regenerate docs/*.docx and docs/*.pptx after a retrain --
+# not part of the deployed app, so kept out of the main requirements.txt.
+#   pip install -r scripts/requirements-docs.txt
+#   python scripts/generate_docx_report.py
+#   python scripts/generate_pptx_deck.py
+python-docx==1.2.0
+python-pptx==1.0.2
