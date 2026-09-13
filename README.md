@@ -179,19 +179,29 @@ Two email-alert layers, both free (no external API, no per-call cost —
 just SMTP and Python string templates over real model + SHAP output via
 `report_generator.py`), covering two different meanings of "automated":
 
+Both layers alert in **two severity tiers**, not just one — an early
+warning the moment a drive first crosses into *elevated* risk (time to
+start watching it), and a critical alert if it goes on to cross *critical*
+risk (act now). A drive that jumps straight from healthy to critical in
+one step only gets the critical alert, since there was no genuine
+early-warning window to report on for that drive.
+
 - **In-browser alert** (`email_alerts.py`, wired into `live_feed.py`): when
-  a drive crosses into critical risk while someone is actively stepping
+  a drive crosses either threshold while someone is actively stepping
   through Fleet Overview's replay (Step forward or Live mode), a rule-based
-  incident summary is built from that drive's real SHAP explanation and
-  emailed. At most one new alert per day-tick and one per drive per
-  session. This only fires while the app is open in a browser — see the
-  "Critical-risk alert emails" expander on that page.
+  summary is built from that drive's real SHAP explanation and emailed
+  immediately — no delay, it happens in the same click. At most one new
+  alert per tier per day-tick and one of each per drive per session. This
+  only fires while the app is open in a browser — see the "Two-tier risk
+  alert emails" expander on that page.
 - **Scheduled automation** (`scripts/check_and_alert.py` +
   `.github/workflows/fleet-check.yml`): a GitHub Actions workflow that runs
   **on an hourly schedule, independent of the deployed app or anyone having
   it open** — the genuinely unattended piece. Each run advances the replay
-  a couple of simulated days, checks for newly-critical drives or
-  failures, and emails a status report. State persists in
+  a couple of simulated days, checks for newly-elevated/critical drives or
+  failures, and emails one consolidated status report per run (not
+  instant — tied to the hourly schedule, or trigger it manually from the
+  Actions tab for an on-demand check). State persists in
   `automation/state.json`, committed back to the repo by the workflow
   itself after each run. Free and unlimited on a public GitHub repo — see
   `automation/README.md` for setup (GitHub Actions secrets, not Render env

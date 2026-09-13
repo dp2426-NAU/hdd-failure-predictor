@@ -51,6 +51,7 @@ SAMPLE_DATA_PATH = "data/sample_drive_stats.csv"
 REAL_DATA_PATH = "data/real_drive_stats.csv"
 
 RISK_HIGH = 0.66
+RISK_ELEVATED = 0.33
 DAYS_PER_CHECK = 2  # simulated days advanced per run -- tuned so an hourly GitHub Actions
                      # schedule replays the full ~90-day quarter in about 2 days
 
@@ -65,10 +66,15 @@ def _resolve_data_path() -> str:
 def _load_state() -> dict:
     if os.path.exists(STATE_PATH):
         with open(STATE_PATH) as f:
-            return json.load(f)
+            state = json.load(f)
+        # .setdefault, not a hard requirement -- state.json written before
+        # the elevated-tier alert existed won't have this key yet.
+        state.setdefault("previously_elevated", [])
+        return state
     return {
         "day_index": -1,  # -1 so the very first run starts at day 0
         "previously_high_risk": [],
+        "previously_elevated": [],
         "cumulative_failures": 0,
         "cumulative_warned": 0,
     }
@@ -104,6 +110,7 @@ def main():
 
     state = _load_state()
     previously_high_risk = set(state["previously_high_risk"])
+    previously_elevated = set(state["previously_elevated"])
 
     start_idx = state["day_index"] + 1
     looped = False
@@ -113,12 +120,14 @@ def main():
         # indefinitely without anyone needing to reset it by hand.
         start_idx = 0
         previously_high_risk = set()
+        previously_elevated = set()
         state["cumulative_failures"] = 0
         state["cumulative_warned"] = 0
         looped = True
     end_idx = min(start_idx + DAYS_PER_CHECK - 1, len(dates) - 1)
 
     newly_critical_events = []
+    newly_elevated_events = []
     failure_events = []
 
     for idx in range(start_idx, end_idx + 1):
@@ -130,6 +139,13 @@ def main():
 
         high_risk_now = set(snapshot.loc[snapshot["risk"] >= RISK_HIGH, "serial_number"])
         newly_high_risk = high_risk_now - previously_high_risk
+        # Strictly the elevated band (RISK_ELEVATED <= risk < RISK_HIGH) -- a drive that
+        # jumps straight to critical in one step never passed through here, so it only
+        # gets the critical event below, not a same-day "early warning" with no lead time.
+        elevated_now = set(
+            snapshot.loc[(snapshot["risk"] >= RISK_ELEVATED) & (snapshot["risk"] < RISK_HIGH), "serial_number"]
+        )
+        newly_elevated = elevated_now - previously_elevated
 
         todays_failures = snapshot.loc[(snapshot["date"] == as_of) & (snapshot["failure"] == 1), "serial_number"]
         for serial in todays_failures:
@@ -148,7 +164,17 @@ def main():
                 "risk_pct": float(row["risk"]), "summary": summary,
             })
 
+        for serial in list(newly_elevated)[:5]:
+            row = snapshot[snapshot["serial_number"] == serial].iloc[0]
+            contribs = _shap_contributions(explainer, row, feature_columns)
+            summary = report_generator.early_warning_summary(serial, float(row["risk"]), contribs)
+            newly_elevated_events.append({
+                "date": str(as_of.date()), "serial": serial,
+                "risk_pct": float(row["risk"]), "summary": summary,
+            })
+
         previously_high_risk = high_risk_now
+        previously_elevated = elevated_now
 
     period_label = f"{dates[start_idx].date()} to {dates[end_idx].date()}"
     if looped:
@@ -160,6 +186,7 @@ def main():
     subject, body = report_generator.status_report(
         period_label=period_label,
         drives_monitored=len(final_snapshot),
+        newly_elevated=newly_elevated_events,
         newly_critical=newly_critical_events,
         failures=failure_events,
         cumulative_failures=state["cumulative_failures"],
@@ -167,14 +194,16 @@ def main():
     )
 
     sent = email_alerts.send_alert_email(subject, body)
-    print(f"Checked {period_label}: {len(newly_critical_events)} newly critical, "
-          f"{len(failure_events)} failures. Email sent: {sent}")
+    print(f"Checked {period_label}: {len(newly_elevated_events)} newly elevated, "
+          f"{len(newly_critical_events)} newly critical, {len(failure_events)} failures. "
+          f"Email sent: {sent}")
     if not email_alerts.is_configured():
         print("(email not configured -- set SMTP_HOST/PORT/USER/PASSWORD + ALERT_EMAIL_TO "
               "as GitHub Actions secrets to actually send. State still updates below.)")
 
     state["day_index"] = end_idx
     state["previously_high_risk"] = sorted(previously_high_risk)
+    state["previously_elevated"] = sorted(previously_elevated)
     _save_state(state)
 
 

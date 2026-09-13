@@ -17,8 +17,10 @@ Each scheduled run:
 1. Reads `state.json` to see which simulated day it left off on.
 2. Advances a couple of simulated days forward through the real Q1 2026
    Backblaze quarter.
-3. Checks for any drive that newly crossed into critical risk, or
-   genuinely failed, in that window.
+3. Checks for any drive that newly crossed into **elevated** risk (early
+   warning) or **critical** risk (act now), or genuinely failed, in that
+   window. A drive that jumps straight to critical in one step only counts
+   as critical -- there was no real early-warning lead time to report.
 4. Builds a plain-English status report (`report_generator.py` — rule-based
    string templates over real SHAP output, no external API, no cost) and
    emails it via SMTP (`email_alerts.py`).

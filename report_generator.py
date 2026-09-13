@@ -11,18 +11,19 @@ Deliberately template-based, not an LLM: turns a drive's real SHAP
 contributions into a short plain-English summary using plain Python string
 formatting over real model output. No API key, no per-call cost, no
 network dependency beyond SMTP for actually sending it.
+
+Two severity tiers, both grounded in the classifier's early-warning design
+(see prepare_data.py's HORIZON_DAYS docstring) rather than bolted on:
+  - "elevated" -- a drive just crossed RISK_ELEVATED (33%). Early warning,
+    time to start watching it -- this is the lead time the whole project's
+    early-warning-labeling approach exists to buy you.
+  - "critical" -- a drive just crossed RISK_HIGH (66%). Act now.
 """
 
 from __future__ import annotations
 
 
-def incident_summary(
-    serial: str,
-    risk_pct: float,
-    shap_contributions: list[tuple[str, float]],
-) -> str:
-    """A short plain-English incident summary for one newly-critical drive,
-    built from its real SHAP contributions (positive = raises risk)."""
+def _driver_sentence(shap_contributions: list[tuple[str, float]]) -> str:
     positive = sorted(
         [(label, value) for label, value in shap_contributions if value > 0],
         key=lambda x: -x[1],
@@ -30,37 +31,63 @@ def incident_summary(
     top = positive[:2]
     if top:
         drivers = " and ".join(f"{label} ({value:+.2f})" for label, value in top)
-        driver_sentence = f"Main contributing factors: {drivers}."
-    else:
-        driver_sentence = "No single reading dominates -- the risk is a combination of several small elevations."
+        return f"Main contributing factors: {drivers}."
+    return "No single reading dominates -- the risk is a combination of several small elevations."
 
+
+def early_warning_summary(
+    serial: str,
+    risk_pct: float,
+    shap_contributions: list[tuple[str, float]],
+) -> str:
+    """A short plain-English summary for a drive that just crossed into
+    ELEVATED risk -- an early heads-up, not yet an emergency."""
+    return (
+        f"{risk_pct:.0%} predicted probability of failing within the next 7 days -- "
+        f"just crossed into elevated risk. {_driver_sentence(shap_contributions)} "
+        "Recommended action: keep an eye on this drive over the next few days; no "
+        "immediate action needed yet, but it's worth having on your radar."
+    )
+
+
+def incident_summary(
+    serial: str,
+    risk_pct: float,
+    shap_contributions: list[tuple[str, float]],
+) -> str:
+    """A short plain-English incident summary for one newly-CRITICAL drive,
+    built from its real SHAP contributions (positive = raises risk)."""
     return (
         f"{risk_pct:.0%} predicted probability of failing within the next 7 days. "
-        f"{driver_sentence} Recommended action: schedule a proactive inspection or "
-        "replacement within the next few days."
+        f"{_driver_sentence(shap_contributions)} Recommended action: schedule a "
+        "proactive inspection or replacement within the next few days."
     )
 
 
 def status_report(
     period_label: str,
     drives_monitored: int,
+    newly_elevated: list[dict],
     newly_critical: list[dict],
     failures: list[dict],
     cumulative_failures: int,
     cumulative_warned: int,
 ) -> tuple[str, str]:
     """Returns (subject, body) for one automated check window.
-    newly_critical: list of {"date", "serial", "risk_pct", "summary"}
+    newly_elevated / newly_critical: list of {"date", "serial", "risk_pct", "summary"}
     failures: list of {"date", "serial", "had_warning"}"""
+    n_elev = len(newly_elevated)
     n_crit = len(newly_critical)
     n_fail = len(failures)
 
     if n_fail > 0:
-        subject = f"🚨 Fleet check ({period_label}): {n_fail} failure(s), {n_crit} new critical drive(s)"
+        subject = f"🚨 Fleet check ({period_label}): {n_fail} failure(s), {n_crit} new critical, {n_elev} new elevated"
     elif n_crit > 0:
-        subject = f"⚠️ Fleet check ({period_label}): {n_crit} new critical drive(s)"
+        subject = f"🚨 Fleet check ({period_label}): {n_crit} new critical drive(s)"
+    elif n_elev > 0:
+        subject = f"⚠️ Fleet check ({period_label}): {n_elev} new drive(s) entered elevated risk"
     else:
-        subject = f"✅ Fleet check ({period_label}): no new critical drives"
+        subject = f"✅ Fleet check ({period_label}): fleet nominal, nothing new"
 
     lines = [
         f"Automated fleet check -- {period_label}",
@@ -79,14 +106,21 @@ def status_report(
         lines.append("")
 
     if newly_critical:
-        lines.append(f"NEWLY CRITICAL ({n_crit}):")
+        lines.append(f"NEWLY CRITICAL -- act now ({n_crit}):")
         for c in newly_critical:
             lines.append(f"- {c['date']}: drive {c['serial']} -- {c['risk_pct']:.0%}")
             lines.append(f"  {c['summary']}")
         lines.append("")
 
-    if n_crit == 0 and n_fail == 0:
-        lines.append("No new critical drives or failures since the last check. Fleet nominal.")
+    if newly_elevated:
+        lines.append(f"NEWLY ELEVATED -- early warning, worth watching ({n_elev}):")
+        for c in newly_elevated:
+            lines.append(f"- {c['date']}: drive {c['serial']} -- {c['risk_pct']:.0%}")
+            lines.append(f"  {c['summary']}")
+        lines.append("")
+
+    if n_crit == 0 and n_elev == 0 and n_fail == 0:
+        lines.append("No new elevated/critical drives or failures since the last check. Fleet nominal.")
         lines.append("")
 
     lines.append(

@@ -34,12 +34,14 @@ with top_r:
     live_on = st.toggle("▶ Live mode", value=False, help="Auto-advance the simulated clock")
 
 alerts_on = email_alerts.is_configured()
-with st.expander(f"📧 Critical-risk alert emails — {'ON' if alerts_on else 'not configured'}"):
+with st.expander(f"📧 Two-tier risk alert emails — {'ON' if alerts_on else 'not configured'}"):
     st.caption(
-        "When a drive crosses into critical risk during this replay, a rule-based summary is built "
-        "from its real SHAP explanation (no external API, no per-call cost) and emailed — same idea "
-        "as Operator Lookup's per-drive SHAP chart, delivered as an alert instead of read on the page. "
-        "At most one new alert per day-tick, and each drive triggers at most one per session."
+        "Two severity tiers, both built from a drive's real SHAP explanation (no external API, no "
+        "per-call cost): **⚠️ early warning** the moment a drive crosses into *elevated* risk — time "
+        "to start watching it, before anything urgent — and **🚨 critical** if it goes on to cross "
+        "*critical* risk. A drive that jumps straight to critical in one step only gets the critical "
+        "email, since there was no genuine early-warning window for it. At most one email per tier "
+        "per day-tick, and each drive triggers at most one of each per session."
     )
     st.markdown(
         '<div class="disclosure"><b>This in-browser alert only fires while the replay is running in '

@@ -113,8 +113,12 @@ def init_session_state():
         st.session_state.failures_with_prior_warning = 0
     if "previously_high_risk" not in st.session_state:
         st.session_state.previously_high_risk = set()
-    if "alerted_serials" not in st.session_state:
-        st.session_state.alerted_serials = set()  # drives already emailed this session -- one alert per drive
+    if "previously_elevated" not in st.session_state:
+        st.session_state.previously_elevated = set()  # strictly the "elevated" tier, not critical
+    if "alerted_critical_serials" not in st.session_state:
+        st.session_state.alerted_critical_serials = set()  # one critical email per drive per session
+    if "alerted_elevated_serials" not in st.session_state:
+        st.session_state.alerted_elevated_serials = set()  # one early-warning email per drive per session
 
 
 def advance_one_day():
@@ -129,7 +133,9 @@ def advance_one_day():
         st.session_state.cumulative_failures = 0
         st.session_state.failures_with_prior_warning = 0
         st.session_state.previously_high_risk = set()
-        st.session_state.alerted_serials = set()
+        st.session_state.previously_elevated = set()
+        st.session_state.alerted_critical_serials = set()
+        st.session_state.alerted_elevated_serials = set()
 
 
 def reset():
@@ -139,7 +145,9 @@ def reset():
     st.session_state.cumulative_failures = 0
     st.session_state.failures_with_prior_warning = 0
     st.session_state.previously_high_risk = set()
-    st.session_state.alerted_serials = set()
+    st.session_state.previously_elevated = set()
+    st.session_state.alerted_critical_serials = set()
+    st.session_state.alerted_elevated_serials = set()
 
 
 def current_date():
@@ -173,13 +181,12 @@ def _shap_contributions(row: pd.Series, feature_columns: list[str]) -> list[tupl
     return list(zip(feature_columns, [float(v) for v in values]))
 
 
-def _maybe_send_critical_alert(serial: str, row: pd.Series) -> str | None:
-    """Drafts a rule-based incident summary (report_generator.py -- no
-    external API, free) and emails it for a drive that just crossed into
-    critical risk, at most once per drive per session (see
-    alerted_serials). Returns an event-feed message on a successful send,
-    None otherwise (not configured, or the send failed) so the caller can
-    add a visible event only when something real happened.
+def _maybe_send_alert(serial: str, row: pd.Series, severity: str) -> str | None:
+    """Drafts a rule-based summary (report_generator.py -- no external API,
+    free) and emails it for a drive that just crossed a risk threshold.
+    severity is "elevated" (early warning, RISK_ELEVATED) or "critical"
+    (RISK_HIGH). Returns an event-feed message on a successful send, None
+    otherwise (not configured, or the send failed).
 
     HONEST SCOPE: this in-browser alert only runs while someone has the
     app open and is stepping through the replay (or has Live mode on) --
@@ -192,12 +199,16 @@ def _maybe_send_critical_alert(serial: str, row: pd.Series) -> str | None:
 
     feature_columns = _load_feature_columns()
     shap_contribs = _shap_contributions(row, feature_columns)
-    summary = report_generator.incident_summary(serial, float(row["risk"]), shap_contribs)
+    risk = float(row["risk"])
 
-    sent = email_alerts.send_alert_email(
-        subject=f"[Drive Alert] {serial} flagged HIGH RISK ({row['risk']:.0%})",
-        body=summary,
-    )
+    if severity == "critical":
+        summary = report_generator.incident_summary(serial, risk, shap_contribs)
+        subject = f"🚨 CRITICAL: Drive {serial} flagged HIGH RISK ({risk:.0%})"
+    else:
+        summary = report_generator.early_warning_summary(serial, risk, shap_contribs)
+        subject = f"⚠️ EARLY WARNING: Drive {serial} entered ELEVATED risk ({risk:.0%})"
+
+    sent = email_alerts.send_alert_email(subject=subject, body=summary)
     return "📧 Alert emailed" if sent else None
 
 
@@ -210,6 +221,11 @@ def step_and_record():
 
     high_risk_now = set(snapshot.loc[snapshot["tier"] == "critical", "serial_number"])
     newly_high_risk = high_risk_now - st.session_state.previously_high_risk
+    # Strictly the "elevated" band (not critical) -- a drive that jumps straight from
+    # healthy to critical in one tick never passed through here, so it correctly gets
+    # only the critical alert below, not a same-day "early warning" with zero lead time.
+    elevated_now = set(snapshot.loc[snapshot["tier"] == "elevated", "serial_number"])
+    newly_elevated = elevated_now - st.session_state.previously_elevated
     todays_failures = snapshot.loc[(snapshot["date"] == as_of) & (snapshot["failure"] == 1), "serial_number"]
 
     for serial in todays_failures:
@@ -224,26 +240,47 @@ def step_and_record():
             "level": "critical",
         })
 
-    alerted_this_tick = False  # at most one AI alert per tick -- bounds latency/cost even on a noisy day
+    # At most one email per severity tier per tick -- bounds latency even on a noisy day.
+    critical_alerted_this_tick = False
     for serial in list(newly_high_risk)[:5]:  # cap noisy days
         row = snapshot[snapshot["serial_number"] == serial].iloc[0]
         st.session_state.live_events.insert(0, {
             "date": str(as_of.date()),
-            "message": f"Drive {serial} crossed into HIGH RISK ({row['risk']:.0%})",
-            "level": "elevated",
+            "message": f"Drive {serial} crossed into CRITICAL risk ({row['risk']:.0%})",
+            "level": "critical",
         })
-        if not alerted_this_tick and serial not in st.session_state.alerted_serials:
-            alert_msg = _maybe_send_critical_alert(serial, row)
-            st.session_state.alerted_serials.add(serial)
-            alerted_this_tick = True
+        if not critical_alerted_this_tick and serial not in st.session_state.alerted_critical_serials:
+            alert_msg = _maybe_send_alert(serial, row, "critical")
+            st.session_state.alerted_critical_serials.add(serial)
+            critical_alerted_this_tick = True
             if alert_msg:
                 st.session_state.live_events.insert(0, {
                     "date": str(as_of.date()),
-                    "message": f"{alert_msg} for drive {serial}",
+                    "message": f"{alert_msg} (CRITICAL) for drive {serial}",
+                    "level": "critical",
+                })
+
+    elevated_alerted_this_tick = False
+    for serial in list(newly_elevated)[:5]:  # cap noisy days
+        row = snapshot[snapshot["serial_number"] == serial].iloc[0]
+        st.session_state.live_events.insert(0, {
+            "date": str(as_of.date()),
+            "message": f"Drive {serial} crossed into ELEVATED risk ({row['risk']:.0%})",
+            "level": "elevated",
+        })
+        if not elevated_alerted_this_tick and serial not in st.session_state.alerted_elevated_serials:
+            alert_msg = _maybe_send_alert(serial, row, "elevated")
+            st.session_state.alerted_elevated_serials.add(serial)
+            elevated_alerted_this_tick = True
+            if alert_msg:
+                st.session_state.live_events.insert(0, {
+                    "date": str(as_of.date()),
+                    "message": f"{alert_msg} (early warning) for drive {serial}",
                     "level": "elevated",
                 })
 
     st.session_state.previously_high_risk = high_risk_now
+    st.session_state.previously_elevated = elevated_now
     st.session_state.live_events = st.session_state.live_events[:40]  # keep the feed bounded
 
     st.session_state.live_history.append({
