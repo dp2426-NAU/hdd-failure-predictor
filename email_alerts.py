@@ -1,7 +1,7 @@
 """
-email_alerts.py -- sends the AI-drafted critical-risk incident summary via
-SMTP (see assistant.py for the drafting, live_feed.py for where this is
-triggered).
+email_alerts.py -- sends the critical-risk incident summary via SMTP (see
+report_generator.py for the rule-based drafting, live_feed.py and
+scripts/check_and_alert.py for where this is triggered).
 
 HONEST SCOPE: this fires during the interactive replay -- when someone has
 the app open and is stepping through days or running Live mode on Fleet
@@ -38,8 +38,15 @@ def is_configured() -> bool:
 
 def send_alert_email(subject: str, body: str) -> bool:
     """Returns True only on a confirmed send. Never raises -- a bad SMTP
-    config shouldn't crash the dashboard mid-replay, it should just mean no
-    email went out (callers surface that to the event feed)."""
+    config shouldn't crash the dashboard mid-replay or the scheduled
+    GitHub Actions check, it should just mean no email went out (callers
+    surface that to the event feed / run log).
+
+    On failure, prints the exception to stdout -- smtplib error messages
+    (e.g. "535 Username and Password not accepted") never include the
+    password itself, only the server's rejection reason, so this is safe
+    to log and is what actually makes a bad SMTP config diagnosable
+    instead of a silent, unexplained False."""
     if not is_configured():
         return False
 
@@ -60,5 +67,6 @@ def send_alert_email(subject: str, body: str) -> bool:
             server.login(user, password)
             server.sendmail(user, [to_addr], msg.as_string())
         return True
-    except Exception:
+    except Exception as e:
+        print(f"send_alert_email failed: {type(e).__name__}: {e}")
         return False
