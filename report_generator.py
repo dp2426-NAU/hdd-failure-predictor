@@ -80,12 +80,22 @@ def status_report(
     n_crit = len(newly_critical)
     n_fail = len(failures)
 
+    # Build the subject from whichever categories are non-zero, so a run with
+    # both critical and elevated events (the common case) mentions both counts
+    # instead of only the more severe one -- a subject that only says "N
+    # critical" when there are ALSO M elevated drives buried in the body reads
+    # as if the elevated section doesn't exist.
+    parts = []
     if n_fail > 0:
-        subject = f"🚨 Fleet check ({period_label}): {n_fail} failure(s), {n_crit} new critical, {n_elev} new elevated"
-    elif n_crit > 0:
-        subject = f"🚨 Fleet check ({period_label}): {n_crit} new critical drive(s)"
-    elif n_elev > 0:
-        subject = f"⚠️ Fleet check ({period_label}): {n_elev} new drive(s) entered elevated risk"
+        parts.append(f"{n_fail} failure(s)")
+    if n_crit > 0:
+        parts.append(f"{n_crit} critical")
+    if n_elev > 0:
+        parts.append(f"{n_elev} elevated")
+
+    if parts:
+        icon = "🚨" if (n_fail > 0 or n_crit > 0) else "⚠️"
+        subject = f"{icon} Fleet check ({period_label}): " + ", ".join(parts)
     else:
         subject = f"✅ Fleet check ({period_label}): fleet nominal, nothing new"
 
