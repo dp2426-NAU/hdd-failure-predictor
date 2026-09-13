@@ -1,7 +1,8 @@
 {
-  "day_index": 43,
+  "day_index": 45,
   "previously_high_risk": [
     "ZL21ZVL5",
+    "ZL226Y2W",
     "ZL22K5S5",
     "ZL22YRHE",
     "ZL22YRJG",
@@ -51,7 +52,6 @@
     "ZL2CCBAP",
     "ZL2ER6G6",
     "ZL2FAPL2",
-    "ZL2G34F6",
     "ZL2K5T5Y",
     "ZL2K6HHN",
     "ZL2L7XY3",
@@ -63,6 +63,7 @@
     "ZL2L9J4J",
     "ZL2L9JCL",
     "ZL2LMZTC",
+    "ZL2LVLGE",
     "ZL2MD0PN",
     "ZL2MD6JT",
     "ZL2MLT54",
@@ -72,6 +73,6 @@
     "ZL2NFZZ0",
     "ZL2NPK11"
   ],
-  "cumulative_failures": 22,
-  "cumulative_warned": 18
+  "cumulative_failures": 25,
+  "cumulative_warned": 21
 }
