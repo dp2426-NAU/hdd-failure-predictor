@@ -1,5 +1,12 @@
 # Predicting Drive Failure
 
+[![Live Demo](https://img.shields.io/badge/demo-live-4caf7d?logo=render&logoColor=white)](https://hdd-failure-predictor.onrender.com)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/built%20with-Streamlit-ff4b4b?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+
+**Live demo:** https://hdd-failure-predictor.onrender.com *(Render free tier — spins down after 15 min idle, ~1 min to wake back up on first load)*
+
 A predictive-maintenance prototype: trains models on hard-drive SMART
 telemetry (Backblaze's real published schema) to flag drives likely to fail,
 estimate how long they have left, and recommend a cost-optimal alert
@@ -17,6 +24,16 @@ Built for an IT capstone project, deployable for free.
   a **remaining-useful-life** estimate per drive (survival analysis via a Cox
   Proportional Hazards model), and a **3D cost-optimized alert-threshold
   surface** built from real held-out test predictions.
+
+## Screenshots
+
+| Home — real-data banner | Fleet Overview — 3D rack + event feed |
+|---|---|
+| ![Home](docs/screenshots/01_home.png) | ![Fleet Overview](docs/screenshots/03_fleet_overview_rack.png) |
+
+| Operator Lookup — per-drive SHAP | Optimization Lab — RUL + 3D cost surface |
+|---|---|
+| ![Operator Lookup](docs/screenshots/04_operator_lookup.png) | ![Optimization Lab](docs/screenshots/06_optimization_lab_cost_surface.png) |
 
 ## Why this project isn't just another "predict drive failure" notebook
 
@@ -118,6 +135,8 @@ hdd-failure-predictor/
 ├── report_generator.py             # rule-based (free, no external API) incident/status report text
 ├── email_alerts.py                 # SMTP sender for critical-risk alerts and automated reports
 ├── requirements.txt
+├── .env.example                    # every env var this project reads, with no real values
+├── LICENSE                         # MIT
 ├── render.yaml                     # Render Blueprint — one-click deploy config
 ├── .streamlit/config.toml          # dark professional theme
 ├── .github/workflows/
@@ -125,6 +144,8 @@ hdd-failure-predictor/
 ├── automation/
 │   ├── state.json                  # persisted state for the scheduled check (see automation/README.md)
 │   └── README.md                   # how the scheduled automation works + how to set it up
+├── docs/
+│   └── screenshots/                # dashboard screenshots used in this README
 ├── pages/
 │   ├── 1_Fleet_Overview.py         # leadership/budget dashboard (live-feel + 3D rack)
 │   ├── 2_Operator_Lookup.py        # technician dashboard (SHAP-explained single-drive detail)
